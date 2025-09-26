@@ -1,5 +1,6 @@
 import asyncio
 from utils.hybrid import hybrid_rag_bm25
+from utils.title_generator import title_llm
 import streamlit as st
 import os
 from dotenv import find_dotenv, load_dotenv
@@ -10,12 +11,62 @@ import shutil
 # Load environment variables
 load_dotenv(find_dotenv())
 
+def init_chatbot():
+    
+    st.sidebar.header("Conversation Options")
+    st.sidebar.button("Clear conversation", key="clear_conversation")
+    st.sidebar.toggle("Use chat history", key="use_chat_history", value=True)
+
+    # if "topic" not in st.session_state:
+    #     st.session_state.topic = "anything in the PDF files"
+
+    if "title" not in st.session_state:
+        folder_path = "knowledge base/"
+        files = os.listdir(folder_path)
+        if files != []:
+            title, topic = title_llm(str(files))
+            st.session_state.title = title
+            st.session_state.topic = topic
+        else:
+            st.session_state.title = "Personal Chatbot"
+            st.session_state.topic = "anything in the PDF files"
+    
+    if st.session_state.clear_conversation or "messages" not in st.session_state:
+        st.session_state.messages = []
+
+
+## Get the chat history
+def get_chat_history():
+    start_index = max(
+        0, len(st.session_state.messages) - st.session_state.num_chat_messages
+    )
+    return st.session_state.messages[start_index : len(st.session_state.messages) - 1]
+
+def make_chat_history_summary(chat_history, question):
+    
+    prompt = f"""
+        [INST]
+        Based on the chat history below and the question, generate a query that extend the question with the chat history provided. The query should be in natural language.
+        Answer with only the query. Do not add any explanation.
+
+        <chat_history>
+        {chat_history}
+        </chat_history>
+        <question>
+        {question}
+        </question>
+        [/INST]
+    """
+    return prompt
 
 def main():
+    init_chatbot()
+
+    st.title(st.session_state.title)
+    icons = {"assistant": "❄️", "user": "👤"}
+
     if "selected" not in st.session_state:
         st.session_state.selected = None
-
-    st.title("Personal Chatbot")
 
     with st.sidebar:
 
@@ -35,11 +86,19 @@ def main():
                     with open(f"./knowledge base/{uploaded_file.name}", "wb") as f:
                         f.write(uploaded_file.getbuffer())
                 utils.populate_database.main()
-                st.write("Uploaded PDFs:", pdf_files)
                 st.success("Database updated!")
                 
                 # Clear uploader by resetting session state and rerunning
-                st.session_state.uploaded_file = None
+                st.session_state.uploaded_file = True
+                folder_path = "knowledge base/"
+                files = os.listdir(folder_path)
+                if files != []:
+                    title, topic = title_llm(str(files))
+                    st.session_state.title = title
+                    st.session_state.topic = topic
+                else:
+                    st.session_state.title = "Personal Chatbot"
+                    st.session_state.topic = "anything in the PDF files"
                 st.rerun()
 
         # Folder to list files from
@@ -125,15 +184,13 @@ def main():
                 # Mark as done
                 st.session_state.db_reset = True
                 st.session_state.reset = False
+                st.session_state.title = "Personal Chatbot"
                 st.success("Database reset completed!")
                 st.rerun()
-
-            
-    if files:
-        st.write("Enter your query below:")
-        query = st.text_input("Query:")
+        
+        st.sidebar.header("Retrieval Method")
         options = ["RAG Vector Search", "BM25 Lexical Search", "Hybrid (RAG + BM25)"]
-        selection = st.radio("Retrieval Options", options)
+        selection = st.radio("Retrieval Options", options, label_visibility="collapsed")
         if selection == "RAG Vector Search":
             st.session_state.selected = ["rag"]
         elif selection == "BM25 Lexical Search":
@@ -143,25 +200,46 @@ def main():
         else:
             st.session_state.selected = ["rag", "bm25"]
 
-        if st.button("Submit"):
-            if query:
-                with st.spinner("Processing..."):
-                    response, sources =  hybrid_rag_bm25(query, st.session_state.selected)
-                    st.write("Response:")
-                    st.write(response)
-                    st.write("References:")
-                    st.write(sources)
-            else:
-                st.warning("Please enter a query.")
+            
+    if files:
+
+        # Display chat messages from history on app rerun
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"], avatar=icons[message["role"]]):
+                st.markdown(message["content"])
+
+        if question := st.chat_input("Any talks about " + str(st.session_state.topic)):
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": question})
+            # Display user message in chat message container
+            with st.chat_message("user", avatar=icons["user"]):
+                st.markdown(question.replace("$", r"\$"))
+
+            # Display assistant response in chat message container
+            with st.chat_message("assistant", avatar=icons["assistant"]):
+                message_placeholder = st.empty()
+                question = question.replace("'", "")
+                with st.spinner("Thinking..."):
+                    if st.session_state.use_chat_history:
+                        chat_history = get_chat_history()
+                        if chat_history == []:
+                            hist_prompt = ""
+                        else:
+                            hist_prompt = make_chat_history_summary(chat_history, question)
+                    else:
+                        hist_prompt = ""
+                    response, sources =  hybrid_rag_bm25(question, st.session_state.selected, hist_prompt)
+                    message_placeholder.markdown(response)
+
+            st.session_state.messages.append(
+                {"role": "assistant", "content": response}
+            )
+        else:
+            st.warning("Please enter a query.")
+
     else:
         st.info("No documents in the knowledge base. Please upload a PDF in the sidebar.")
 
 if __name__ == "__main__":
-    # if sys.argv[-1] == "reset":
-    #     utils.populate_database.clear_database()
-    #     folder_path = "./knowledge base/"
-    #     for filename in os.listdir(folder_path):
-    #         file_path = os.path.join(folder_path, filename)
-    #         if os.path.isfile(file_path):
-    #             os.remove(file_path)
+    st.session_state.num_chat_messages = 5
     main()

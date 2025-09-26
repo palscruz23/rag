@@ -27,7 +27,7 @@ def reciprocal_rank_fusion(rankings, k=60):
     # sort by highest RRF score
     return sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
-def hybrid_rag_bm25(query: str, tools: list[str] = ['rag', 'bm25']):
+def hybrid_rag_bm25(query: str, tools: list[str] = ['rag', 'bm25'], hist_prompt: str = ""):
 
     rag_content, rag_sources = context_rag(query)
     bm25_content, bm25_sources, chunks_with_ids = context_bm25(query)
@@ -48,10 +48,18 @@ def hybrid_rag_bm25(query: str, tools: list[str] = ['rag', 'bm25']):
                 sources.append((fused[i][0], doc.page_content))
 
     context_text = "\n\n---\n\n".join([doc for doc in results])
-    prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
+    
+    if hist_prompt != "":
+        model = ChatOpenAI(model_name= "gpt-5", api_key=api_key)
+        response = model.invoke(hist_prompt)
+        hist_text = response.content
+    else:
+        hist_text = "None"
+    PROMPT_TEMPLATE_HIST = f"CHAT HISTORY: \n {hist_text} {PROMPT_TEMPLATE}"
+    prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE_HIST)
     prompt = prompt_template.format(context=context_text, query=query)
 
-    model = ChatOpenAI(model_name= "gpt-4o", api_key=api_key)
+    model = ChatOpenAI(model_name= "gpt-5", api_key=api_key)
     response_text = model.invoke(prompt)
 
     # sources = [source, doc for source, doc in sources]
