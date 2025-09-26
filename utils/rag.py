@@ -41,7 +41,6 @@ def query_rag(query: str):
     db = Chroma(
         persist_directory=CHROMA_PATH,
         embedding_function=get_embedding_function(),
-        collection_name="car_maintenance"
     )
 
     # Search the DB.
@@ -67,7 +66,6 @@ def context_rag(query: str):
     db = Chroma(
         persist_directory=CHROMA_PATH,
         embedding_function=get_embedding_function(),
-        collection_name="car_maintenance"
     )
 
     # Search the DB.

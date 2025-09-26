@@ -2,3 +2,4 @@
 utils/chroma/
 utils/__pycache__/
 knowledge base/manual/
+__pycache__/
