@@ -1,0 +1,14 @@
+pypdf
+langchain
+chromadb # Vector storage
+pytest
+openai
+langchain-community
+langchain-openai
+markdown
+streamlit
+python-dotenv
+langchain.tools
+langchain-chroma
+pandas
+rank-bm25
