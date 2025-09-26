@@ -25,4 +25,6 @@ def context_bm25(query: str):
 
     return top_n, sources, chunks_with_ids
 # query = "What are the failure modes of a pump?"
-# context_bm25(query)
+# top_n, sources, chunks_with_ids = context_bm25(query)
+# sources = set([doc.metadata.get("source", None) for doc in chunks_with_ids])
+# print(sources)
