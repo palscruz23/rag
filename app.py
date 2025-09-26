@@ -26,7 +26,7 @@ def main():
         uploaded_files = st.file_uploader("Upload PDF", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
         pdf_files = []
 
-        if uploaded_files is not None:
+        if uploaded_files:
             upload = st.button("Upload pdf")
             if upload: 
                 for uploaded_file in uploaded_files:
