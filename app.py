@@ -22,6 +22,7 @@ def init_chatbot():
 
     if "title" not in st.session_state:
         folder_path = "knowledge base/"
+        os.makedirs(folder_path, exist_ok=True)  # create folder if it doesn't exist
         files = os.listdir(folder_path)
         if files != []:
             title, topic = title_llm(str(files))
