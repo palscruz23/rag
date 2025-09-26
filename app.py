@@ -133,7 +133,7 @@ def main():
         st.write("Enter your query below:")
         query = st.text_input("Query:")
         options = ["RAG Vector Search", "BM25 Lexical Search", "Hybrid (RAG + BM25)"]
-        selection = st.pills("Retrieval Options", options, selection_mode="single")
+        selection = st.radio("Retrieval Options", options)
         if selection == "RAG Vector Search":
             st.session_state.selected = ["rag"]
         elif selection == "BM25 Lexical Search":
