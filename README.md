@@ -1,3 +1,13 @@
+---
+title: Hybrid RAG
+emoji: 📚
+colorFrom: blue
+colorTo: green
+sdk: streamlit
+sdk_version: "1.49.1"
+app_file: app.py
+pinned: false
+---
 
 # RAG (Retrieval-Augmented Generation)
 
@@ -74,20 +84,6 @@ streamlit run app.py
 ```
 
 You may also have submodules under `utils` (e.g. embedding, retrieval, prompt, generation).
----
-
-## Hugging Face Space Configuration
----
-title: Hybrid RAG
-emoji: 📚
-colorFrom: blue
-colorTo: green
-sdk: streamlit
-sdk_version: "1.49.1"
-app_file: app.py
-pinned: false
----
-
 ---
 
 ## 📜 License
