@@ -8,8 +8,15 @@ import pandas as pd
 import utils.populate_database
 import sys
 import shutil
+from langchain_chroma import Chroma
+from utils.get_embeddings import get_embedding_function
+import uuid
+
 # Load environment variables
 load_dotenv(find_dotenv())
+
+embedding_function = get_embedding_function()
+CHROMA_PATH =  "./utils/chroma"
 
 def init_chatbot():
     
@@ -34,7 +41,23 @@ def init_chatbot():
     
     if st.session_state.clear_conversation or "messages" not in st.session_state:
         st.session_state.messages = []
+    
+    if "vectorstore" not in st.session_state:
+        st.session_state.vectorstore = Chroma(
+            persist_directory=CHROMA_PATH,
+            embedding_function=get_embedding_function()
+            )
 
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = str(uuid.uuid4())
+        
+    if "session_dir" not in st.session_state:
+        session_dir = os.path.join("temp_uploads", st.session_state.session_id)
+        os.makedirs(session_dir, exist_ok=True)
+        st.session_state.session_dir = session_dir
+    
+    if "reset" not in st.session_state:
+        st.session_state.reset = False
 
 ## Get the chat history
 def get_chat_history():
@@ -62,37 +85,38 @@ def make_chat_history_summary(chat_history, question):
 
 def main():
     init_chatbot()
-
     st.title(st.session_state.title)
     icons = {"assistant": "❄️", "user": "👤"}
 
     if "selected" not in st.session_state:
         st.session_state.selected = None
 
+    if "uploaded_files" not in st.session_state:
+        st.session_state.uploaded_files = []
+
     with st.sidebar:
-
-        if "uploaded_file" not in st.session_state:
-            st.session_state.uploaded_file = None
         st.sidebar.header("Upload PDF")
-
         uploaded_files = st.file_uploader("Upload PDF", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
         pdf_files = []
 
         if uploaded_files:
             upload = st.button("Upload pdf")
             if upload: 
+                files = os.listdir(st.session_state.session_dir)
                 for uploaded_file in uploaded_files:
-                    # Save the file locally
-                    pdf_files.append(uploaded_file.name)
-                    with open(f"./knowledge base/{uploaded_file.name}", "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-                utils.populate_database.main()
+                    print(uploaded_file)
+                    print(files)
+                    if uploaded_file.name not in files:
+                        file_path = os.path.join(st.session_state.session_dir, uploaded_file.name)
+                        # Save uploaded file to per-session folder
+                        with open(file_path, "wb") as out_file:
+                            out_file.write(uploaded_file.getbuffer())
+                        st.session_state.uploaded_files.append(uploaded_file.name)
+                        utils.populate_database.main()
                 st.success("Database updated!")
                 
                 # Clear uploader by resetting session state and rerunning
-                st.session_state.uploaded_file = True
-                folder_path = "knowledge base/"
-                files = os.listdir(folder_path)
+                files = st.session_state.uploaded_files
                 if files != []:
                     title, topic = title_llm(str(files))
                     st.session_state.title = title
@@ -100,22 +124,17 @@ def main():
                 else:
                     st.session_state.title = "Personal Chatbot"
                     st.session_state.topic = "anything in the PDF files"
+                st.write(st.session_state.uploaded_files)
                 st.rerun()
 
-        # Folder to list files from
-        folder_path = "knowledge base/"
-        os.makedirs(folder_path, exist_ok=True)  # create folder if it doesn't exist
-
         # Get list of files
-        files = os.listdir(folder_path)
-
+        files = st.session_state.uploaded_files
+        
         # State to control display mode
         if "show_radio" not in st.session_state:
             st.session_state.show_radio = False
 
-        # Initialize session state flags
-        if "reset" not in st.session_state:
-            st.session_state.reset = False
+
 
         # Reset button
         if st.button("Remove files"):
@@ -142,14 +161,17 @@ def main():
                 st.session_state.show_radio = not st.session_state.show_radio
                 # Your database cleanup logic here
                 if selected_file != "All files":
-                    file_path = folder_path + selected_file
+                    file_path = os.path.join(st.session_state.session_dir, selected_file)
                     files = [selected_file]
                     if os.path.exists(file_path):
                         os.remove(file_path)   # deletes the file
-                        print(f"Deleted: {file_path}")
+                        st.session_state.uploaded_files = [
+                            f for f in st.session_state.uploaded_files if f != selected_file
+                            ]
+                        print(f"Deleted: {selected_file}")
                     else:
                         print("File does not exist")
-                    files = os.listdir(folder_path)
+                    files = os.listdir(st.session_state.session_dir)
                     if files != []:
                         title, topic = title_llm(str(files))
                         st.session_state.title = title
@@ -159,40 +181,36 @@ def main():
                         st.session_state.topic = "anything in the PDF files"
 
                 else:
-                    # Delete all files under folder
-                    if os.path.exists(folder_path):
-                        shutil.rmtree(folder_path)
+                    if os.path.exists(st.session_state.session_dir):
+                        shutil.rmtree(st.session_state.session_dir)   # deletes the folder + all PDFs inside
+                        os.makedirs(st.session_state.session_dir, exist_ok=True)  # recreate empty folder
+                        st.session_state.uploaded_files = []
+                        st.success("All PDFs deleted for this session ✅")
+                    else:
+                        st.warning("No PDFs found to delete.")
                     st.session_state.title = "Personal Chatbot"
                     st.session_state.topic = "anything in the PDF files"
                     
                 # Example: delete all vectors from Chroma
-                from langchain_chroma import Chroma
-                from utils.get_embeddings import get_embedding_function
-                embedding_function = get_embedding_function()
-                
-                CHROMA_PATH =  "./utils/chroma"
-                client = Chroma(
-                                    persist_directory=CHROMA_PATH,
-                                    embedding_function=get_embedding_function()
-                                )
-                
-                # collections = client.list_collections()
-                existing_items = client.get(include=[])
-                # (Optional) verify
+
+                existing_items = st.session_state.vectorstore.get(include=[])
+                files = [selected_file]
+
                 # print("Remaining IDs:", existing_items["ids"])
                 # st.write("Remaining IDs:", existing_items["ids"])
                 for file in files:
-                    file_path_id = "knowledge base\\" + file
                     ids_to_delete = [
                         doc_id
-                        for doc_id in zip(existing_items["ids"])
-                        if file_path_id in doc_id]
+                        for doc_id in existing_items["ids"]
+                        if file in doc_id]
                     # Delete all existing vectors
                     if ids_to_delete:
-                        client.delete(ids=list(ids_to_delete))
+                        st.session_state.vectorstore.delete(ids=list(ids_to_delete))
+                existing_items = st.session_state.vectorstore.get(include=[])
+                existing_ids = set(existing_items["ids"])
+                print(f"Number of existing documents in st.session_state.vectorstore after deletion: {len(existing_ids)}")
 
                 # Mark as done
-                st.session_state.db_reset = True
                 st.session_state.reset = False
                 st.session_state.messages = []
                 st.success("Database reset completed!")

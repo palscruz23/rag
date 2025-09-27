@@ -5,3 +5,4 @@ knowledge base/
 __pycache__/
 *.pdf
 archive/
+temp_uploads/

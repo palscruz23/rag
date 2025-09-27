@@ -41,6 +41,7 @@ def hybrid_rag_bm25(query: str, tools: list[str] = ['rag', 'bm25'], hist_prompt:
     fused = reciprocal_rank_fusion(sources)
     results = []
     sources = []
+    print(fused)
     for i in range(5):
         for doc in chunks_with_ids:
             if doc.metadata.get("id", None) == fused[i][0]:

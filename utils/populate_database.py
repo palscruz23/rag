@@ -6,13 +6,13 @@ from langchain_chroma import Chroma
 from langchain.schema.document import Document
 from utils.get_embeddings import get_embedding_function
 from dotenv import find_dotenv, load_dotenv
+import streamlit as st
 
 # Load environment variables
 load_dotenv(find_dotenv())
 
 #Directory
 CHROMA_PATH =  "./utils/chroma"
-DATA_PATH = "./knowledge base"
 
 def main():
     # Create (or update) the data store.
@@ -24,7 +24,7 @@ def main():
 
 
 def load_documents():
-    document_loader = PyPDFDirectoryLoader(DATA_PATH)
+    document_loader = PyPDFDirectoryLoader(st.session_state.session_dir)
     return document_loader.load()
 
 
@@ -40,17 +40,17 @@ def split_documents(documents: list[Document]):
 
 def add_to_chroma(chunks: list[Document]):
     # Load the existing database.
-    db = Chroma(
-        persist_directory=CHROMA_PATH,
+    st.session_state.vectorstore = Chroma(
+        persist_directory=None,
         embedding_function=get_embedding_function()
     )
     # Calculate Page IDs.
     chunks_with_ids = calculate_chunk_ids(chunks)
 
     # Add or Update the documents.
-    existing_items = db.get(include=[])  # IDs are always included by default
+    existing_items = st.session_state.vectorstore.get(include=[])  # IDs are always included by default
     existing_ids = set(existing_items["ids"])
-    print(f"Number of existing documents in DB: {len(existing_ids)}")
+    print(f"Number of existing documents in st.session_state.vectorstore: {len(existing_ids)}")
 
     # Only add documents that don't exist in the DB.
     new_chunks = []
@@ -61,7 +61,7 @@ def add_to_chroma(chunks: list[Document]):
     if len(new_chunks):
         print(f"👉 Adding new documents: {len(new_chunks)}")
         new_chunk_ids = [chunk.metadata["id"] for chunk in new_chunks]
-        db.add_documents(new_chunks, ids=new_chunk_ids)
+        st.session_state.vectorstore.add_documents(new_chunks, ids=new_chunk_ids)
     else:
         print("✅ No new documents to add")
 
@@ -95,8 +95,8 @@ def calculate_chunk_ids(chunks):
     return chunks
 
 
-def clear_database():
-    if os.path.exists(CHROMA_PATH):
-        shutil.rmtree(CHROMA_PATH)
+# def clear_database():
+#     if os.path.exists(CHROMA_PATH):
+#         shutil.rmtree(CHROMA_PATH)
 if __name__ == "__main__":
     main()

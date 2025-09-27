@@ -1,5 +1,5 @@
 from rank_bm25 import BM25Okapi
-from utils.populate_database import load_documents, split_documents, calculate_chunk_ids, DATA_PATH
+from utils.populate_database import load_documents, split_documents, calculate_chunk_ids
 
 def tokenize(corpus):
     return [doc.page_content.lower().split() for doc in corpus]
