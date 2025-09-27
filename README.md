@@ -1,15 +1,4 @@
-<!--
----
-title: Hybrid RAG
-emoji: 📚
-colorFrom: blue
-colorTo: green
-sdk: streamlit
-sdk_version: "1.36.0"
-app_file: app.py
-pinned: false
----
--->
+
 # RAG (Retrieval-Augmented Generation)
 
 A lightweight hybrid RAG prototype combining retrieval and language model generation to answer queries over documents or knowledge sources.
@@ -85,6 +74,20 @@ streamlit run app.py
 ```
 
 You may also have submodules under `utils` (e.g. embedding, retrieval, prompt, generation).
+---
+
+## Hugging Face Space Configuration
+---
+title: Hybrid RAG
+emoji: 📚
+colorFrom: blue
+colorTo: green
+sdk: streamlit
+sdk_version: "1.49.1"
+app_file: app.py
+pinned: false
+---
+
 ---
 
 ## 📜 License
