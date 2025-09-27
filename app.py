@@ -149,13 +149,22 @@ def main():
                         print(f"Deleted: {file_path}")
                     else:
                         print("File does not exist")
+                    files = os.listdir(folder_path)
+                    if files != []:
+                        title, topic = title_llm(str(files))
+                        st.session_state.title = title
+                        st.session_state.topic = topic
+                    else:
+                        st.session_state.title = "Personal Chatbot"
+                        st.session_state.topic = "anything in the PDF files"
+
                 else:
                     # Delete all files under folder
                     if os.path.exists(folder_path):
                         shutil.rmtree(folder_path)
-                    os.makedirs(folder_path, exist_ok=True)
-                    files = os.listdir(folder_path)
-
+                    st.session_state.title = "Personal Chatbot"
+                    st.session_state.topic = "anything in the PDF files"
+                    
                 # Example: delete all vectors from Chroma
                 from langchain_chroma import Chroma
                 from utils.get_embeddings import get_embedding_function
@@ -185,7 +194,7 @@ def main():
                 # Mark as done
                 st.session_state.db_reset = True
                 st.session_state.reset = False
-                st.session_state.title = "Personal Chatbot"
+                st.session_state.messages = []
                 st.success("Database reset completed!")
                 st.rerun()
         
