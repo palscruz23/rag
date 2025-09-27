@@ -235,8 +235,6 @@ def main():
             st.session_state.messages.append(
                 {"role": "assistant", "content": response}
             )
-        else:
-            st.warning("Please enter a query.")
 
     else:
         st.info("No documents in the knowledge base. Please upload a PDF in the sidebar.")
