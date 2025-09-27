@@ -1,3 +1,4 @@
+<!--
 ---
 title: Hybrid RAG
 emoji: 📚
@@ -8,7 +9,7 @@ sdk_version: "1.36.0"
 app_file: app.py
 pinned: false
 ---
-
+-->
 # RAG (Retrieval-Augmented Generation)
 
 A lightweight hybrid RAG prototype combining retrieval and language model generation to answer queries over documents or knowledge sources.
