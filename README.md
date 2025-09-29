@@ -84,6 +84,7 @@ streamlit run app.py
 ```
 
 You may also have submodules under `utils` (e.g. embedding, retrieval, prompt, generation).
+
 ---
 
 ## 📜 License
